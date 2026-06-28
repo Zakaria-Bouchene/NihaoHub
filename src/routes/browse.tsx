@@ -10,7 +10,7 @@ const textsQ = queryOptions({ queryKey: ["texts"], queryFn: () => listTexts() })
 
 export const Route = createFileRoute("/browse")({
   head: () => ({ meta: [
-    { title: "Browse — Mandarin Lab" },
+    { title: "Browse — LangsHub" },
     { name: "description", content: "Browse community-contributed words, sentences, and reading texts." },
   ]}),
   loader: ({ context }) => {

@@ -41,7 +41,7 @@ export function SiteHeader() {
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         <Link to="/" className="flex items-center gap-2 font-serif-display text-lg font-semibold tracking-tight">
           <BookOpenText className="h-5 w-5 text-primary" />
-          <span>Mandarin <span className="text-primary">Lab</span></span>
+          <span>Langs<span className="text-primary">Hub</span></span>
         </Link>
         <nav className="hidden items-center gap-1 text-sm sm:flex">
           <NavLink to="/browse">Browse</NavLink>

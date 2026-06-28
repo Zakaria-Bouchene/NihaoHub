@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({ meta: [{ title: "Sign in — Mandarin Lab" }, { name: "description", content: "Sign in or create an account to start learning Chinese." }] }),
+  head: () => ({ meta: [{ title: "Sign in — LangsHub" }, { name: "description", content: "Sign in or create an account to start learning Chinese." }] }),
   component: AuthPage,
 });
 

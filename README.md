@@ -1,8 +1,8 @@
-# Mandarin Lab
+# LangsHub
 
 **An open-source platform for learning Mandarin Chinese — built in the open, improved by the community.**
 
-Mandarin Lab gives learners deliberate practice tools — three-step flashcards, progressive reading
+LangsHub gives learners deliberate practice tools — three-step flashcards, progressive reading
 practice, smart auto-curated decks, and community-contributed content — so anyone can become
 fluent without paywalls or dark patterns.
 
@@ -73,7 +73,7 @@ spaced repetition (SM-2), add audio playback via the Web Speech API, build a lea
 
 ## 📜 License
 
-[MIT](./LICENSE) © Mandarin Lab contributors
+[MIT](./LICENSE) © LangsHub contributors
 
 ---
 

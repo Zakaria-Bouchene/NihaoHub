@@ -1,6 +1,6 @@
-# Contributing to Mandarin Lab
+# Contributing to LangsHub
 
-Thanks for helping make Mandarin Lab better! This guide covers everything you need to start
+Thanks for helping make LangsHub better! This guide covers everything you need to start
 contributing — code, content, docs, or ideas.
 
 ## Ways to contribute

@@ -6,9 +6,9 @@ import { BookOpenText, Layers, Sparkles, Users } from "lucide-react";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Mandarin Lab — open-source Chinese learning" },
+      { title: "LangsHub — open-source Chinese learning" },
       { name: "description", content: "Flashcards, reading practice, and community collections to learn Mandarin." },
-      { property: "og:title", content: "Mandarin Lab" },
+      { property: "og:title", content: "LangsHub" },
       { property: "og:description", content: "Open-source platform for learning Chinese: flashcards, reading, collections." },
     ],
   }),
