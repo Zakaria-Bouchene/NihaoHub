@@ -1,0 +1,79 @@
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { BookOpenText, LogOut, Moon, Sun } from "lucide-react";
+
+export function SiteHeader() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState<string | null>(null);
+  const [dark, setDark] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      setEmail(session?.user.email ?? null);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("theme");
+    const isDark = stored ? stored === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    setDark(isDark);
+    document.documentElement.classList.toggle("dark", isDark);
+  }, []);
+
+  const toggleDark = () => {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("theme", next ? "dark" : "light");
+  };
+
+  async function signOut() {
+    await supabase.auth.signOut();
+    navigate({ to: "/", replace: true });
+  }
+
+  return (
+    <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
+        <Link to="/" className="flex items-center gap-2 font-serif-display text-lg font-semibold tracking-tight">
+          <BookOpenText className="h-5 w-5 text-primary" />
+          <span>Mandarin <span className="text-primary">Lab</span></span>
+        </Link>
+        <nav className="hidden items-center gap-1 text-sm sm:flex">
+          <NavLink to="/browse">Browse</NavLink>
+          {email && <NavLink to="/study">Study</NavLink>}
+          {email && <NavLink to="/reading">Reading</NavLink>}
+          {email && <NavLink to="/collections">Collections</NavLink>}
+          {email && <NavLink to="/contribute">Contribute</NavLink>}
+          {email && <NavLink to="/stats">Stats</NavLink>}
+        </nav>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" onClick={toggleDark} aria-label="Toggle theme">
+            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </Button>
+          {email ? (
+            <Button variant="ghost" size="sm" onClick={signOut}><LogOut className="mr-1 h-4 w-4" />Sign out</Button>
+          ) : (
+            <Button asChild size="sm"><Link to="/auth">Sign in</Link></Button>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
+  return (
+    <Link
+      to={to}
+      className="rounded-md px-3 py-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      activeProps={{ className: "rounded-md px-3 py-1.5 bg-muted text-foreground font-medium" }}
+    >
+      {children}
+    </Link>
+  );
+}
