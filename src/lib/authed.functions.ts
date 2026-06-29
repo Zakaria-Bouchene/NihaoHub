@@ -1,15 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireFirebaseAuth } from "@/lib/firebase-auth";
 import { z } from "zod";
 
-const itemKind = z.enum(["word", "sentence", "text"]);
+const itemKind = z.enum(["word", "sentence", "text", "card", "passage"]);
 const rating = z.enum(["again", "hard", "good", "easy"]);
 const flag = z.enum(["difficult", "favorite"]);
 
 /* ---------- Reviews ---------- */
 
 export const recordReview = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireFirebaseAuth])
   .inputValidator((d: { itemKind: "word" | "sentence" | "text"; itemId: string; rating: "again"|"hard"|"good"|"easy"; reverse?: boolean }) =>
     z.object({ itemKind, itemId: z.string().uuid(), rating, reverse: z.boolean().optional() }).parse(d),
   )
@@ -26,11 +26,12 @@ export const recordReview = createServerFn({ method: "POST" })
   });
 
 export const getStats = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireFirebaseAuth])
   .handler(async ({ context }) => {
     const { data: reviews, error } = await context.supabase
       .from("reviews")
       .select("rating, reviewed_at, item_kind")
+      .eq("user_id", context.userId)
       .order("reviewed_at", { ascending: false })
       .limit(1000);
     if (error) throw new Error(error.message);
@@ -54,7 +55,7 @@ export const getStats = createServerFn({ method: "GET" })
 /* ---------- Flags (difficult / favorite) ---------- */
 
 export const toggleFlag = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireFirebaseAuth])
   .inputValidator((d: { itemKind: "word"|"sentence"|"text"; itemId: string; flag: "difficult"|"favorite" }) =>
     z.object({ itemKind, itemId: z.string().uuid(), flag }).parse(d),
   )
@@ -79,11 +80,12 @@ export const toggleFlag = createServerFn({ method: "POST" })
   });
 
 export const listMyFlags = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireFirebaseAuth])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("user_flags")
-      .select("item_kind, item_id, flag");
+      .select("item_kind, item_id, flag")
+      .eq("user_id", context.userId);
     if (error) throw new Error(error.message);
     return data ?? [];
   });
@@ -91,18 +93,19 @@ export const listMyFlags = createServerFn({ method: "GET" })
 /* ---------- Collections ---------- */
 
 export const listCollections = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireFirebaseAuth])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("collections")
       .select("id, name, description, is_public, cloned_from, created_at, owner_id")
+      .or(`is_public.eq.true,owner_id.eq.${context.userId}`)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
   });
 
 export const createCollection = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireFirebaseAuth])
   .inputValidator((d: { name: string; description?: string; isPublic?: boolean }) =>
     z.object({ name: z.string().trim().min(1).max(120), description: z.string().max(1000).optional(), isPublic: z.boolean().optional() }).parse(d),
   )
@@ -117,7 +120,7 @@ export const createCollection = createServerFn({ method: "POST" })
   });
 
 export const getCollection = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireFirebaseAuth])
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: col, error } = await context.supabase
@@ -150,7 +153,7 @@ export const getCollection = createServerFn({ method: "GET" })
   });
 
 export const addToCollection = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireFirebaseAuth])
   .inputValidator((d: { collectionId: string; itemKind: "word"|"sentence"|"text"; itemId: string }) =>
     z.object({ collectionId: z.string().uuid(), itemKind, itemId: z.string().uuid() }).parse(d),
   )
@@ -167,7 +170,7 @@ export const addToCollection = createServerFn({ method: "POST" })
   });
 
 export const removeFromCollection = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireFirebaseAuth])
   .inputValidator((d: { itemRowId: string }) => z.object({ itemRowId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("collection_items").delete().eq("id", data.itemRowId);
@@ -176,7 +179,7 @@ export const removeFromCollection = createServerFn({ method: "POST" })
   });
 
 export const cloneCollection = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireFirebaseAuth])
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: src, error: e1 } = await context.supabase
@@ -198,7 +201,7 @@ export const cloneCollection = createServerFn({ method: "POST" })
   });
 
 export const deleteCollection = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireFirebaseAuth])
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("collections").delete().eq("id", data.id);
@@ -209,7 +212,7 @@ export const deleteCollection = createServerFn({ method: "POST" })
 /* ---------- Smart collections ---------- */
 
 export const getSmartCollection = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireFirebaseAuth])
   .inputValidator((d: { kind: "difficult"|"favorite"|"struggling" }) =>
     z.object({ kind: z.enum(["difficult", "favorite", "struggling"]) }).parse(d),
   )
@@ -221,6 +224,7 @@ export const getSmartCollection = createServerFn({ method: "GET" })
       const { data: rs } = await context.supabase
         .from("reviews")
         .select("item_kind, item_id, rating")
+        .eq("user_id", context.userId)
         .gte("reviewed_at", since)
         .in("rating", ["again", "hard"]);
       const seen = new Set<string>();
@@ -230,19 +234,25 @@ export const getSmartCollection = createServerFn({ method: "GET" })
       }
     } else {
       const { data: fl } = await context.supabase
-        .from("user_flags").select("item_kind, item_id").eq("flag", data.kind);
+        .from("user_flags").select("item_kind, item_id")
+        .eq("user_id", context.userId)
+        .eq("flag", data.kind);
       itemRefs = (fl ?? []).map(f => ({ kind: f.item_kind, id: f.item_id }));
     }
     const words = itemRefs.filter(r => r.kind === "word").map(r => r.id);
     const sents = itemRefs.filter(r => r.kind === "sentence").map(r => r.id);
-    const [w, s] = await Promise.all([
+    const cards = itemRefs.filter(r => r.kind === "card").map(r => r.id);
+    
+    const [w, s, c] = await Promise.all([
       words.length ? context.supabase.from("words").select("id, chinese, pinyin, english").in("id", words) : Promise.resolve({ data: [] as any[] }),
       sents.length ? context.supabase.from("sentences").select("id, chinese, pinyin, english").in("id", sents) : Promise.resolve({ data: [] as any[] }),
+      cards.length ? context.supabase.from("cards").select("id, source_lang, target_lang, source_text, transliteration, target_text").in("id", cards) : Promise.resolve({ data: [] as any[] }),
     ]);
     return {
       items: [
         ...((w.data ?? []).map((x: any) => ({ item_kind: "word" as const, item_id: x.id, data: x }))),
         ...((s.data ?? []).map((x: any) => ({ item_kind: "sentence" as const, item_id: x.id, data: x }))),
+        ...((c.data ?? []).map((x: any) => ({ item_kind: "card" as const, item_id: x.id, data: x }))),
       ],
     };
   });
@@ -250,7 +260,7 @@ export const getSmartCollection = createServerFn({ method: "GET" })
 /* ---------- Contribute ---------- */
 
 export const createWord = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireFirebaseAuth])
   .inputValidator((d: { chinese: string; pinyin: string; english: string; hskLevel?: number; isPublic?: boolean }) =>
     z.object({
       chinese: z.string().trim().min(1).max(64),
@@ -270,7 +280,7 @@ export const createWord = createServerFn({ method: "POST" })
   });
 
 export const createSentence = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireFirebaseAuth])
   .inputValidator((d: { chinese: string; pinyin: string; english: string; isPublic?: boolean }) =>
     z.object({
       chinese: z.string().trim().min(1).max(512),
@@ -289,7 +299,7 @@ export const createSentence = createServerFn({ method: "POST" })
   });
 
 export const createText = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireFirebaseAuth])
   .inputValidator((d: { title: string; content: string; pinyin?: string; translation: string; isPublic?: boolean }) =>
     z.object({
       title: z.string().trim().min(1).max(200),
@@ -303,6 +313,73 @@ export const createText = createServerFn({ method: "POST" })
     const { data: row, error } = await context.supabase.from("texts").insert({
       title: data.title, content: data.content, pinyin: data.pinyin ?? null,
       translation: data.translation, created_by: context.userId, is_public: data.isPublic ?? true,
+    }).select("id").single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+/* ---------- Multilanguage cards & passages ---------- */
+
+export const createCard = createServerFn({ method: "POST" })
+  .middleware([requireFirebaseAuth])
+  .inputValidator((d: {
+    sourceLang: string; targetLang: string;
+    sourceText: string; transliteration?: string; targetText: string;
+    notes?: string; isPublic?: boolean;
+  }) =>
+    z.object({
+      sourceLang: z.string().length(2),
+      targetLang: z.string().length(2),
+      sourceText: z.string().trim().min(1).max(512),
+      transliteration: z.string().max(1024).optional(),
+      targetText: z.string().trim().min(1).max(512),
+      notes: z.string().max(1000).optional(),
+      isPublic: z.boolean().optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase.from("cards").insert({
+      source_lang: data.sourceLang,
+      target_lang: data.targetLang,
+      source_text: data.sourceText,
+      transliteration: data.transliteration ?? null,
+      target_text: data.targetText,
+      notes: data.notes ?? null,
+      created_by: context.userId,
+      is_public: data.isPublic ?? true,
+    }).select("id").single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+export const createPassage = createServerFn({ method: "POST" })
+  .middleware([requireFirebaseAuth])
+  .inputValidator((d: {
+    sourceLang: string; targetLang: string;
+    title: string; sourceContent: string;
+    transliteration?: string; targetContent: string;
+    isPublic?: boolean;
+  }) =>
+    z.object({
+      sourceLang: z.string().length(2),
+      targetLang: z.string().length(2),
+      title: z.string().trim().min(1).max(200),
+      sourceContent: z.string().trim().min(1).max(8000),
+      transliteration: z.string().max(16000).optional(),
+      targetContent: z.string().trim().min(1).max(8000),
+      isPublic: z.boolean().optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase.from("reading_passages").insert({
+      source_lang: data.sourceLang,
+      target_lang: data.targetLang,
+      title: data.title,
+      source_content: data.sourceContent,
+      transliteration: data.transliteration ?? null,
+      target_content: data.targetContent,
+      created_by: context.userId,
+      is_public: data.isPublic ?? true,
     }).select("id").single();
     if (error) throw new Error(error.message);
     return row;
